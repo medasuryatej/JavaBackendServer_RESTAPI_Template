@@ -2,6 +2,7 @@ package business.discount;
 
 import api.ApiException;
 import business.InfinitytravelDbException.InfinitytravelConnectionDbException;
+import business.InfinitytravelDbException.InfinitytravelQueryDbException;
 import business.JdbcUtils;
 
 import java.sql.Connection;
@@ -25,6 +26,11 @@ public class DiscountDAOJdbc implements DiscountDAO {
     private static final String INSERT_DISCOUNT_SQL =
             "INSERT INTO discount_codes (coupon_code, percentage, creation_date, utilized) " +
                     "VALUES (?, ?, ?, ?) ";
+
+    private static final String FIND_BY_DISCOUNT_CODE_SQL =
+            "SELECT coupon_code, percentage, creation_date, utilized, discount_id " +
+                    "FROM discount_codes " +
+                    "WHERE coupon_code = ? AND utilized=0";
     @Override
     public Discount get(int id) throws SQLException {
         Discount discount = null;
@@ -83,6 +89,24 @@ public class DiscountDAOJdbc implements DiscountDAO {
         } catch (SQLException e) {
             throw new InfinitytravelConnectionDbException("Encountered problem connection to database during insert call", e);
         }
+    }
+    @Override
+    public Discount getByCode(String discount_code) {
+        Discount discount = null;
+        try(Connection connection = JdbcUtils.getConnection();
+            PreparedStatement statement = connection.prepareStatement(FIND_BY_DISCOUNT_CODE_SQL)) {
+            statement.setString(1, discount_code);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    discount = readDiscount(resultSet);
+                }
+            } catch(Exception e) {
+                throw new InfinitytravelQueryDbException("Encounted a problem executing the FIND_BY_DISCOUNT_CODE_SQL command", e);
+            }
+        } catch(SQLException e) {
+            throw new InfinitytravelConnectionDbException("Encountered problem connection to database during getByCode call", e);
+        }
+        return discount;
     }
 
     @Override
